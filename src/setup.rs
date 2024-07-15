@@ -17,7 +17,7 @@ use crate::utils::lagrange_poly;
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Serialize, Deserialize)]
 pub struct SecretKey<E: Pairing> {
-    sk: E::ScalarField,
+    pub sk: E::ScalarField,
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Serialize, Deserialize)]
@@ -228,3 +228,4 @@ mod tests {
         let _ak = AggregateKey::<E>::new(pk, &params);
     }
 }
+
