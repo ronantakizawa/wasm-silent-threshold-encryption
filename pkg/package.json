@@ -1,0 +1,15 @@
+{
+  "name": "silent-threshold",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "silent_threshold_bg.wasm",
+    "silent_threshold.js",
+    "silent_threshold.d.ts"
+  ],
+  "main": "silent_threshold.js",
+  "types": "silent_threshold.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
