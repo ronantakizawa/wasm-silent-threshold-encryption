@@ -57,7 +57,7 @@ pub fn encrypt<E: Pairing>(
     let mut s: [E::ScalarField; 5] = [E::ScalarField::zero(); 5];
 
     s.iter_mut()
-        .for_each(|s| *s = E::ScalarField::rand(&mut rng));
+        .for_each(|mut s| *s = E::ScalarField::rand(&mut rng));
 
     // sa1[0] = s0*ask + s3*g^{tau^t} + s4*g
     sa1[0] = (apk.ask * s[0]) + (params.powers_of_g[t] * s[3]) + (params.powers_of_g[0] * s[4]);

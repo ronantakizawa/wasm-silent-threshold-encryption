@@ -1,29 +1,33 @@
 use ark_ec::pairing::PairingOutput;
-// use crate::utils::{lagrange_coefficients, transpose};
 use ark_ec::{pairing::Pairing, Group};
 use ark_poly::DenseUVPolynomial;
 use ark_poly::{domain::EvaluationDomain, univariate::DensePolynomial, Radix2EvaluationDomain};
 use ark_serialize::*;
 use ark_std::{rand::RngCore, One, UniformRand, Zero};
 use std::ops::{Mul, Sub};
+use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::convert::{IntoWasmAbi, FromWasmAbi};
+use wasm_bindgen::describe::WasmDescribe;
+use serde_wasm_bindgen;
 
 use crate::encryption::Ciphertext;
 use crate::kzg::{UniversalParams, KZG10};
 use crate::utils::lagrange_poly;
 
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Serialize, Deserialize)]
 pub struct SecretKey<E: Pairing> {
     sk: E::ScalarField,
 }
 
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Serialize, Deserialize)]
 pub struct PublicKey<E: Pairing> {
     pub id: usize,
-    pub bls_pk: E::G1,          //BLS pk
-    pub sk_li: E::G1,           //hint
-    pub sk_li_minus0: E::G1,    //hint
-    pub sk_li_by_z: Vec<E::G1>, //hint
-    pub sk_li_by_tau: E::G1,    //hint
+    pub bls_pk: E::G1,
+    pub sk_li: E::G1,
+    pub sk_li_minus0: E::G1,
+    pub sk_li_by_z: Vec<E::G1>,
+    pub sk_li_by_tau: E::G1,
 }
 
 pub struct AggregateKey<E: Pairing> {
@@ -31,8 +35,6 @@ pub struct AggregateKey<E: Pairing> {
     pub agg_sk_li_by_z: Vec<E::G1>,
     pub ask: E::G1,
     pub z_g2: E::G2,
-
-    //preprocessed values
     pub h_minus1: E::G2,
     pub e_gh: PairingOutput<E>,
 }
@@ -69,8 +71,6 @@ impl<E: Pairing> SecretKey<E> {
     }
 
     pub fn get_pk(&self, id: usize, params: &UniversalParams<E>, n: usize) -> PublicKey<E> {
-        // TODO: This runs in quadratic time because we are not preprocessing the Li's
-        // Fix this.
         let domain = Radix2EvaluationDomain::<E::ScalarField>::new(n).unwrap();
 
         let li = lagrange_poly(n, id);
@@ -80,7 +80,6 @@ impl<E: Pairing> SecretKey<E> {
             let num = if id == j {
                 li.clone().mul(&li).sub(&li)
             } else {
-                //cross-terms
                 let l_j = lagrange_poly(n, j);
                 l_j.mul(&li)
             };
@@ -122,7 +121,7 @@ impl<E: Pairing> SecretKey<E> {
     }
 
     pub fn partial_decryption(&self, ct: &Ciphertext<E>) -> E::G2 {
-        ct.gamma_g2 * self.sk // kind of a bls signature on gamma_g2
+        ct.gamma_g2 * self.sk
     }
 }
 
@@ -132,7 +131,6 @@ impl<E: Pairing> AggregateKey<E> {
         let h_minus1 = params.powers_of_h[0] * (-E::ScalarField::one());
         let z_g2 = params.powers_of_h[n] + h_minus1;
 
-        // gather sk_li from all public keys
         let mut ask = E::G1::zero();
         for pki in pk.iter() {
             ask += pki.sk_li;
@@ -156,6 +154,54 @@ impl<E: Pairing> AggregateKey<E> {
             e_gh: E::pairing(params.powers_of_g[0], params.powers_of_h[0]),
         }
     }
+}
+
+fn serialize_scalar<E: Pairing>(scalar: &E::ScalarField) -> Vec<u8> {
+    let mut bytes = vec![];
+    scalar.serialize_uncompressed(&mut bytes).unwrap();
+    bytes
+}
+
+fn deserialize_scalar<E: Pairing>(bytes: &[u8]) -> E::ScalarField {
+    E::ScalarField::deserialize_uncompressed(bytes).unwrap()
+}
+
+// Implement WasmDescribe for SecretKey
+impl<E: Pairing> WasmDescribe for SecretKey<E> {
+    fn describe() {
+        use wasm_bindgen::describe::*;
+        inform(wasm_bindgen::describe::RUST_STRUCT);
+        inform(wasm_bindgen::describe::U8);
+    }
+}
+
+// Implement IntoWasmAbi for SecretKey
+impl<E: Pairing> IntoWasmAbi for SecretKey<E> {
+    type Abi = <JsValue as IntoWasmAbi>::Abi;
+
+    fn into_abi(self) -> Self::Abi {
+        let bytes = serialize_scalar::<E>(&self.sk);
+        let js_value = serde_wasm_bindgen::to_value(&bytes).unwrap();
+        js_value.into_abi()
+    }
+}
+
+// Implement FromWasmAbi for SecretKey
+impl<E: Pairing> FromWasmAbi for SecretKey<E> {
+    type Abi = <JsValue as FromWasmAbi>::Abi;
+
+    unsafe fn from_abi(js: Self::Abi) -> Self {
+        let js_value = JsValue::from_abi(js);
+        let bytes: Vec<u8> = serde_wasm_bindgen::from_value(js_value).unwrap();
+        SecretKey {
+            sk: deserialize_scalar::<E>(&bytes),
+        }
+    }
+}
+
+#[wasm_bindgen(start)]
+pub fn main() {
+    console_error_panic_hook::set_once();
 }
 
 #[cfg(test)]

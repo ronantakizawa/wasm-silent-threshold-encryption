@@ -6,6 +6,7 @@ use ark_ec::{pairing::Pairing, CurveGroup, Group};
 use ark_ec::{scalar_mul::fixed_base::FixedBase, VariableBaseMSM};
 use ark_ff::{One, PrimeField, UniformRand, Zero};
 use ark_poly::DenseUVPolynomial;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid, Write};
 use ark_std::{format, marker::PhantomData, ops::*, vec};
 
 use ark_std::rand::RngCore;
@@ -20,6 +21,74 @@ pub struct UniversalParams<E: Pairing> {
     pub powers_of_g: Vec<E::G1Affine>,
     /// Group elements of the form `{ \beta^i H }`, where `i` ranges from 0 to `degree`.
     pub powers_of_h: Vec<E::G2Affine>,
+}
+
+impl<E: Pairing> CanonicalSerialize for UniversalParams<E> {
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        self.powers_of_g.serialize_with_mode(&mut writer, compress)?;
+        self.powers_of_h.serialize_with_mode(&mut writer, compress)?;
+        Ok(())
+    }
+    
+    fn serialized_size(&self, compress: Compress) -> usize {
+        self.powers_of_g.serialized_size(compress) + self.powers_of_h.serialized_size(compress)
+    }
+    
+    fn serialize_compressed<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
+        self.serialize_with_mode(writer, Compress::Yes)
+    }
+    
+    fn compressed_size(&self) -> usize {
+        self.serialized_size(Compress::Yes)
+    }
+    
+    fn serialize_uncompressed<W: Write>(&self, writer: W) -> Result<(), SerializationError> {
+        self.serialize_with_mode(writer, Compress::No)
+    }
+    
+    fn uncompressed_size(&self) -> usize {
+        self.serialized_size(Compress::No)
+    }
+}
+
+impl<E: Pairing> CanonicalDeserialize for UniversalParams<E> {
+    
+    fn deserialize_with_mode<R: Read>(
+        mut reader: R,
+        compress: Compress,
+        validate: ark_serialize::Validate,
+    ) -> Result<Self, SerializationError> {
+        let powers_of_g = Vec::<E::G1Affine>::deserialize_with_mode(&mut reader, compress, validate)?;
+        let powers_of_h = Vec::<E::G2Affine>::deserialize_with_mode(&mut reader, compress, validate)?;
+        Ok(Self { powers_of_g, powers_of_h })
+    }
+    
+    fn deserialize_compressed<R: Read>(reader: R) -> Result<Self, SerializationError> {
+        Self::deserialize_with_mode(reader, Compress::Yes, ark_serialize::Validate::Yes)
+    }
+    
+    fn deserialize_compressed_unchecked<R: Read>(reader: R) -> Result<Self, SerializationError> {
+        Self::deserialize_with_mode(reader, Compress::Yes, ark_serialize::Validate::No)
+    }
+    
+    fn deserialize_uncompressed<R: Read>(reader: R) -> Result<Self, SerializationError> {
+        Self::deserialize_with_mode(reader, Compress::No, ark_serialize::Validate::Yes)
+    }
+    
+    fn deserialize_uncompressed_unchecked<R: Read>(reader: R) -> Result<Self, SerializationError> {
+        Self::deserialize_with_mode(reader, Compress::No, ark_serialize::Validate::No)
+    }
+}
+
+impl<E: Pairing> Valid for UniversalParams<E> {
+    fn check(&self) -> Result<(), SerializationError> {
+        // Perform necessary checks to ensure that the deserialized data is valid
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

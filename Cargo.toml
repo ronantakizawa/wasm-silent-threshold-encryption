@@ -4,32 +4,36 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-criterion = { version = "0.5.0", features = [ "html_reports" ] }
 ark-std = { version = "0.4.0" }
 ark-ec = { version = "0.4.0" }
 ark-ff = { version = "0.4.0" }
 ark-poly = { version = "0.4.0" }
 ark-bls12-381 = { version = "0.4.0" }
 ark-serialize = { version = "0.4.0" }
+wasm-bindgen = "0.2.92"
+serde = { version = "1.0.204", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
+serde_json = "1.0.120"
+console_error_panic_hook = "0.1.6"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+    "Window",
+    "console"
+]
+
+[dependencies.js-sys]
+version = "0.3"
 
 [features]
-asm = [ "ark-ff/asm" ]
+asm = ["ark-ff/asm"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+criterion = "0.5"
 
 [profile.dev]
 opt-level = 3
 
-[[bench]]
-name = "encryption"
-harness = false
-
-[[bench]]
-name = "decryption"
-harness = false
-
-[[bench]]
-name = "interpolation"
-harness = false
-
-[[bench]]
-name = "setup"
-harness = false
+[lib]
+crate-type = ["cdylib", "rlib"]

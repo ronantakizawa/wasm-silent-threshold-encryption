@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Rust WASM Cryptography</title>
+    <script type="module">
+        import init, { setup_wasm, generate_keys_wasm, encrypt_wasm, decrypt_wasm, SecretKeyWrapper } from './pkg/silent_threshold.js';
+
+        async function run() {
+            await init();
+            const size =256; // Adjust size to balance performance and security
+            console.log("Setting up parameters...");
+            const params = setup_wasm(size);
+            console.log("Parameters setup complete.");
+
+            console.log("Generating keys...");
+            const result = generate_keys_wasm(params);
+            const sk_wrappers = result.sk;
+            const agg_key = result.agg_key;
+            console.log("Keys generated.");
+
+            const t = 1; // Adjusted threshold
+            console.log("Encrypting...");
+            const ct = encrypt_wasm(agg_key, t, params);
+            console.log("Encryption complete.");
+
+            console.log("Decrypting...");
+            const partial_decryptions = sk_wrappers.slice(0, t + 1).map(wrapped_sk => {
+                const sk = SecretKeyWrapper.from_js_value(wrapped_sk); // Use from_js_value to convert back to SecretKey
+                return sk.partial_decryption_js(ct); // Use partial_decryption_js method for decryption
+            });
+            const selector = Array(t + 1).fill(true).concat(Array(size - t - 1).fill(false));
+            console.log("Partial decryptions:", partial_decryptions);
+            console.log("Selector:", selector);
+
+            const dec_key = decrypt_wasm(partial_decryptions, ct, selector, agg_key, params);
+            console.log("Decryption Key:", dec_key);
+        }
+
+        run();
+    </script>
+</head>
+<body>
+    <h1>Rust WASM Cryptography</h1>
+</body>
+</html>
