@@ -281,7 +281,6 @@ impl ProjectiveG2Wrapper {
     }
 }
 
-
 impl ProjectiveG2Wrapper {
     pub fn data(&self) -> Box<[u8]> {
         self.data.clone().into_boxed_slice()

@@ -33,7 +33,7 @@ pub fn setup_wasm(size: usize) -> JsValue {
     log("Initializing RNG...");
     let mut rng = ark_std::test_rng();
     
-    let adjusted_size = size + 2; // Ensure sufficient powers
+    let adjusted_size = size + 1; // Ensure sufficient powers
     log(&format!("Setting up KZG10 parameters with size: {}", adjusted_size));
     let params = KZG10::<E, UniPoly381>::setup(adjusted_size, &mut rng).unwrap();
     
