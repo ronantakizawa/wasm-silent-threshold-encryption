@@ -1,6 +1,8 @@
 # wasm-silent-threshold-encryption
 A WASM implementation of the Silent Threshold Encryption. 
 
+https://ronantakizawa.github.io/wasm-silent-threshold-encryption/
+
 Based on the project **Threshold Encryption with Silent Setup** 
 
 Paper: https://eprint.iacr.org/2024/263
